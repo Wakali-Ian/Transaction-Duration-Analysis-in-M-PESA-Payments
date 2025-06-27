@@ -1,0 +1,51 @@
+Overview:
+
+This project analyzes the time taken to complete transactions using Safaricom's M-PESA payment system in Kenya, focusing on four methods: Direct Send Money, Till Number, Paybill, and Pochi La Biashara. Using a simulated dataset of 10,000 transactions, it investigates how factors like payment method, transaction amount, and time of day influence transaction duration. The project combines statistical analysis, machine learning, and data visualization to provide insights into transaction efficiency, making it suitable for a PhD-level data analysis project.
+
+Objectives:
+
+Compute and visualize the distribution of transaction durations.
+Identify key factors affecting duration using regression models.
+Compare durations across payment methods with statistical tests (ANOVA).
+Predict transaction durations using machine learning (Linear Regression and Random Forest).
+Dataset:
+
+Source: Simulated data for January 2023, generated programmatically to mimic M-PESA transactions.
+Columns:
+start_time: Transaction start (datetime).
+end_time: Transaction end (datetime).
+payment_method: One of Direct Send Money, Till Number, Paybill, or Pochi La Biashara.
+amount: Transaction amount in KES (log-normal, median ~500 KES).
+user_id: User identifier (1-1000).
+time_of_day: Hour of transaction (0-23).
+duration: Transaction duration in seconds (derived from end_time - start_time).
+Generation: Created using Python, with base durations (10s for Direct Send Money, 20s for Till Number, 25s for Paybill, 30s for Pochi La Biashara) modified by amount, time of day, and random noise.
+Methodology:
+
+Data Generation: A Python script simulates realistic transaction data, saved as mpesa_transactions.csv.
+Analysis:
+Descriptive Statistics: Compute duration statistics (mean, median, etc.).
+Visualizations: Generate histograms, boxplots, scatter plots, and bar charts to explore duration distributions, payment method differences, and relationships with amount and time of day.
+Regression Models:
+Linear Regression to quantify linear effects of amount, time of day, and payment method.
+Random Forest to capture non-linear relationships and assess feature importance.
+Statistical Test: ANOVA to test for significant duration differences across payment methods.
+Tools: Python with pandas, numpy, matplotlib, seaborn, scikit-learn, and scipy.
+Key Findings:
+
+Linear Regression: Achieved MSE of 27.66 and R² of 0.66, indicating 66% of duration variance explained. Payment method has the strongest effect (e.g., Pochi La Biashara adds ~20.4s, Paybill ~15s, Till Number ~10.2s compared to Direct Send Money). Amount and time of day have minor impacts.
+Random Forest: Slightly lower performance (MSE 31.20, R² 0.62), with payment methods and amount as top predictors, suggesting some non-linear effects.
+ANOVA: F-statistic of 5624.05 (p-value 0.0000) confirms significant duration differences across payment methods.
+Insights: Direct Send Money is the fastest (~10s), while Pochi La Biashara is slowest (~30s), likely due to processing complexity. Peak hours (8 AM - 8 PM) slightly increase durations.
+Outputs:
+
+mpesa_transactions.csv: Simulated dataset.
+Visualizations:
+duration_histogram.png: Distribution of durations (5-50s, right-skewed).
+duration_boxplot.png: Median durations by payment method.
+duration_vs_amount.png: Scatter plot showing slight duration increase with amount.
+avg_duration_by_hour.png: Bar plot of average durations by hour, higher during peak times.
+Console: Regression metrics, coefficients, feature importances, and ANOVA results.
+Significance:
+
+This project demonstrates advanced data analysis techniques, combining statistical testing, regression modeling, and machine learning to study a real-world financial system. It highlights the impact of payment method design on transaction efficiency, with potential applications for optimizing mobile payment systems.

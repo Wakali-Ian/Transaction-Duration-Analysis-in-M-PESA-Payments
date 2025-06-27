@@ -1,0 +1,22 @@
+Linear Regression MSE: 27.66, R2: 0.66
+
+Linear Regression Coefficients:
+                            Feature  Coefficient
+0                            amount     0.000955
+1                       time_of_day     0.102092
+2            payment_method_Paybill    14.974291
+3  payment_method_Pochi La Biashara    20.406632
+4        payment_method_Till Number    10.193543
+
+Random Forest MSE: 31.20, R2: 0.62
+
+Random Forest Feature Importances:
+                            Feature  Importance
+0                            amount    0.247689
+2            payment_method_Paybill    0.216969
+4        payment_method_Till Number    0.209819
+3  payment_method_Pochi La Biashara    0.197263
+1                       time_of_day    0.128260
+
+ANOVA F-statistic: 5624.05, p-value: 0.0000
+

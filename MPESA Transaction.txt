@@ -1,0 +1,162 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from scipy.stats import f_oneway
+
+# Set random seed for reproducibility
+np.random.seed(42)
+
+# --- Data Generation ---
+# Number of transactions
+n_transactions = 10000
+
+# Define simulation period (January 2023)
+start_date = pd.to_datetime('2023-01-01')
+end_date = pd.to_datetime('2023-01-31')
+total_seconds = (end_date - start_date).total_seconds()
+
+# Generate random start times
+start_times = start_date + pd.to_timedelta(np.random.uniform(0, total_seconds, n_transactions), unit='s')
+
+# Generate payment methods with specified probabilities
+payment_methods = np.random.choice(
+    ['Direct Send Money', 'Till Number', 'Paybill', 'Pochi La Biashara'],
+    size=n_transactions,
+    p=[0.4, 0.3, 0.2, 0.1]
+)
+
+# Generate transaction amounts using log-normal distribution (median ~500 KES)
+amounts = np.random.lognormal(mean=6.21, sigma=1, size=n_transactions)
+
+# Generate random user IDs (1 to 1000)
+user_ids = np.random.randint(1, 1001, size=n_transactions)
+
+# Create DataFrame
+df = pd.DataFrame({
+    'start_time': start_times,
+    'payment_method': payment_methods,
+    'amount': amounts,
+    'user_id': user_ids
+})
+
+# Extract time of day (hour)
+df['time_of_day'] = df['start_time'].dt.hour
+
+# Define base durations (in seconds) for each payment method
+base_duration = {
+    'Direct Send Money': 10,
+    'Till Number': 20,
+    'Paybill': 25,
+    'Pochi La Biashara': 30
+}
+
+# Calculate duration components
+df['base_duration'] = df['payment_method'].map(base_duration)
+df['amount_factor'] = 0.001 * df['amount']  # Small effect of amount
+df['time_of_day_factor'] = np.where((df['time_of_day'] >= 8) & (df['time_of_day'] < 20), 5, 0)
+df['random_noise'] = np.random.normal(0, 5, size=n_transactions)
+
+# Compute total duration and ensure minimum of 5 seconds
+df['duration'] = df['base_duration'] + df['amount_factor'] + df['time_of_day_factor'] + df['random_noise']
+df['duration'] = df['duration'].clip(lower=5)
+
+# Compute end time
+df['end_time'] = df['start_time'] + pd.to_timedelta(df['duration'], unit='s')
+
+# Select final columns
+df = df[['start_time', 'end_time', 'payment_method', 'amount', 'user_id', 'time_of_day', 'duration']]
+
+# Save dataset to CSV (optional, for reference)
+df.to_csv('mpesa_transactions.csv', index=False)
+
+# --- Analysis ---
+
+# --- Visualization ---
+
+# Histogram of transaction durations
+plt.figure(figsize=(10, 6))
+plt.hist(df['duration'], bins=50, color='skyblue')
+plt.xlabel('Duration (seconds)')
+plt.ylabel('Frequency')
+plt.title('Distribution of Transaction Durations')
+plt.savefig('duration_histogram.png')
+plt.close()
+
+# Boxplot of durations by payment method
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='payment_method', y='duration', data=df)
+plt.title('Transaction Durations by Payment Method')
+plt.xticks(rotation=15)
+plt.savefig('duration_boxplot.png')
+plt.close()
+
+# Scatter plot of duration vs amount by payment method
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='amount', y='duration', hue='payment_method', data=df, alpha=0.5)
+plt.title('Duration vs Amount by Payment Method')
+plt.savefig('duration_vs_amount.png')
+plt.close()
+
+# Average duration by time of day
+hourly_avg = df.groupby('time_of_day')['duration'].mean()
+plt.figure(figsize=(10, 6))
+hourly_avg.plot(kind='bar', color='green')
+plt.title('Average Duration by Time of Day')
+plt.xlabel('Hour of Day')
+plt.ylabel('Average Duration (seconds)')
+plt.savefig('avg_duration_by_hour.png')
+plt.close()
+
+# --- Regression Analysis ---
+
+# One-hot encode payment_method
+df_encoded = pd.get_dummies(df, columns=['payment_method'], drop_first=True)
+
+# Select features and target
+X = df_encoded[['amount', 'time_of_day', 'payment_method_Paybill', 
+                'payment_method_Pochi La Biashara', 'payment_method_Till Number']]
+y = df_encoded['duration']
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Linear Regression
+lin_model = LinearRegression()
+lin_model.fit(X_train, y_train)
+y_pred_lin = lin_model.predict(X_test)
+mse_lin = mean_squared_error(y_test, y_pred_lin)
+r2_lin = r2_score(y_test, y_pred_lin)
+print(f'Linear Regression MSE: {mse_lin:.2f}, R2: {r2_lin:.2f}')
+
+# Display coefficients
+coef_df = pd.DataFrame({'Feature': X.columns, 'Coefficient': lin_model.coef_})
+print("\nLinear Regression Coefficients:")
+print(coef_df)
+
+# Random Forest Regressor
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+y_pred_rf = rf_model.predict(X_test)
+mse_rf = mean_squared_error(y_test, y_pred_rf)
+r2_rf = r2_score(y_test, y_pred_rf)
+print(f'\nRandom Forest MSE: {mse_rf:.2f}, R2: {r2_rf:.2f}')
+
+# Feature importances
+importances = rf_model.feature_importances_
+feature_importance_df = pd.DataFrame({'Feature': X.columns, 'Importance': importances})
+print("\nRandom Forest Feature Importances:")
+print(feature_importance_df.sort_values('Importance', ascending=False))
+
+# --- Statistical Test ---
+
+# ANOVA for duration differences across payment methods
+groups = [df['duration'][df['payment_method'] == method] for method in df['payment_method'].unique()]
+f_stat, p_value = f_oneway(*groups)
+print(f'\nANOVA F-statistic: {f_stat:.2f}, p-value: {p_value:.4f}')
+
+print("\nAnalysis complete. Check 'mpesa_transactions.csv' and PNG files for results.")
